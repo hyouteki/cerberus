@@ -3,10 +3,20 @@
 set -xe
 
 CC="gcc"
-LIBS="-lm"
+LIBS=("m")
 BUILD_NAME="cerberus"
-INCLUDE_DIRS="malpractice"
+INCLUDE_DIRS=("malpractice" "lodge")
+
+CFLAGS=""
+for dir in "${INCLUDE_DIRS[@]}"; do
+	CFLAGS="${CFLAGS} -I${dir}"
+done
+
+LFLAGS=""
+for lib in "${LIBS[@]}"; do
+	LFLAGS="${LFLAGS} -l${lib}"
+done
 
 mkdir -p ./build
-$CC "${BUILD_NAME}.c" -o "./build/${BUILD_NAME}" -I $INCLUDE_DIRS $LIBS
+$CC "${BUILD_NAME}.c" $CFLAGS -o "./build/${BUILD_NAME}" $LFLAGS
 ./build/$BUILD_NAME

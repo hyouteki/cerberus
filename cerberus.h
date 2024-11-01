@@ -25,4 +25,10 @@ typedef struct Server {
 	Node node;
 	ClientList *client_list;
 	size_t num_clients;
+	int port;
+	size_t max_concurrent_conns;
+
+	void (*listen)(struct Server *);
 } Server;
+
+void listen_server(Server *server);
