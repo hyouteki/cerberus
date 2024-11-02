@@ -1,6 +1,3 @@
 [submodule "malpractice"]
 	path = malpractice
 	url = https://github.com/hyouteki/malpractice
-[submodule "lodge"]
-	path = lodge
-	url = https://github.com/hyouteki/lodge

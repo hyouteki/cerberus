@@ -9,7 +9,7 @@
 void listen_server(Server *server) {
 	int server_socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_socket < 0) {
-	    ExitFatal("could not instantiate socket");
+	    lodge_fatal("could not instantiate socket");
 	}
 
 	struct sockaddr_in server_addr;
@@ -19,15 +19,15 @@ void listen_server(Server *server) {
 
 	if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
 		close(server_socket);
-		ExitFatal("could not bind socket");
+	    lodge_fatal("could not bind socket");
 	}
 
 	if (listen(server_socket, server->max_concurrent_conns) < 0) {
 		close(server_socket);
-		ExitFatal("could not listen socket");
+		lodge_fatal("could not listen socket");
 	}
-	LogInfo("server listening on port %d", server->port);
-	LogInfo("maximum concurrent connections: %ld", server->max_concurrent_conns);
+	lodge_info("server listening on port %d", server->port);
+	lodge_info("maximum concurrent connections: %ld", server->max_concurrent_conns);
 
 	int client_socket;
 	struct sockaddr_in client_addr;
@@ -35,10 +35,10 @@ void listen_server(Server *server) {
 	while (1) {
 		client_socket = accept(server_socket, (struct sockaddr *)&client_addr, &addr_len);
 		if (client_socket < 0) {
-			LogFatal("could not accept client connection");
+			lodge_error("could not accept client connection");
 			continue;
 		}
-		LogInfo("accepted client connection");
+	    lodge_info("accepted client connection");
 
 		close(client_socket);
 	}

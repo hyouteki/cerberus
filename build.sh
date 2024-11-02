@@ -3,9 +3,9 @@
 set -xe
 
 CC="gcc"
-LIBS=("m")
+LIBS=("m" "pthread")
 BUILD_NAME="cerberus"
-INCLUDE_DIRS=("malpractice" "lodge")
+INCLUDE_DIRS=("malpractice" "malpractice/lodge")
 
 CFLAGS=""
 for dir in "${INCLUDE_DIRS[@]}"; do
