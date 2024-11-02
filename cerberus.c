@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 #include <arpa/inet.h>
 
 #include "cerberus.h"
@@ -23,12 +24,23 @@ void handle_client(Server *server, int client_socket) {
 	server->handle_received_data(server, buffer, bytes_received);	
 }
 
-void instantiate_server(Server *server) {
-	int server_socket = socket(AF_INET, SOCK_STREAM, 0);
+void instantiate_server(Server *server) {	
+	pid_t pid = fork();
+    if (pid < 0) {
+		lodge_fatal("could not create new process for server");
+    } else if (pid > 0) {
+		// Parent process
+		lodge_debug("sleeping for 2 seconds for server to start...");
+		sleep(2);
+		return;
+	}
+	server->pid = getpid();
+
+   	int server_socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_socket < 0) {
 	    lodge_fatal("could not instantiate server socket");
 	}
-
+	
 	struct sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = INADDR_ANY;
@@ -63,6 +75,14 @@ void instantiate_server(Server *server) {
 	close(server_socket);
 }
 
+void close_server(Server *server) {
+	if (kill(server->pid, SIGKILL) == 0) {
+        lodge_info("server with pid '%d' closed successfully", server->pid);
+    } else {
+		lodge_fatal("failed to close server");
+    }
+}
+
 void send_data_to_server(Client *client, void *data, size_t data_size) {
 	int client_socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (client_socket < 0) {
@@ -89,13 +109,20 @@ void send_data_to_server(Client *client, void *data, size_t data_size) {
 }
 
 int main() {
-	Server server = {.params=(ServerParams){.port=3000, .max_concurrent_conns=5,
-											.max_data_buffer_size=65535},
-					 .handle_received_data=&handle_received_string_data,
-					 .handle_client=&handle_client,
-					 .instantiate_server=&instantiate_server};
+	ServerParams params = {.port=3000, .max_concurrent_conns=5, .max_data_buffer_size=65535};
+	Server server = {.params=params, .handle_received_data=&handle_received_string_data,
+					 .handle_client=&handle_client, .instantiate=&instantiate_server,
+					 .close=close_server};
 	
-	server.instantiate_server(&server);
-	
+	server.instantiate(&server);
+
+	Client client = {.server_params=&params, .send_data_to_server=send_data_to_server};
+
+	char *data = "Hello Server, this is client";
+	client.send_data_to_server(&client, (void *)data, strlen(data)+1);
+
+	// Waiting for 4 seconds for server to receive the data then kill server
+	sleep(4);
+	server.close(&server);
 	return 0;
 }

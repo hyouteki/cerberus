@@ -1,3 +1,6 @@
+#ifndef CERBERUS_H_
+#define CERBERUS_H_
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -36,13 +39,18 @@ typedef struct Server {
 	ClientList *client_list;
 	size_t num_clients;
 	ServerParams params;
+	size_t pid;
 
 	void (*handle_received_data)(struct Server *server, void *data, size_t data_size);
 	void (*handle_client)(struct Server *server, int client_socket);
-	void (*instantiate_server)(struct Server *server);
+	void (*instantiate)(struct Server *server);
+	void (*close)(struct Server *server);
 } Server;
 
 void handle_received_data(Server *server, void *data, size_t data_size);
 void handle_client(Server *server, int client_socket);
 void instantiate_server(Server *server);
+void close_server(Server *server);
 void send_data_to_server(Client *client, void *data, size_t data_size);
+
+#endif // CERBERUS_H_
