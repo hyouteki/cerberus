@@ -6,6 +6,10 @@
 
 #include "cerberus.h"
 #include <lodge.h>
+#include <mnist_dataloader.h>
+
+#define ImagesFilePath "malpractice/mnist/train-images-idx3-ubyte"
+#define LabelsFilePath "malpractice/mnist/train-labels-idx1-ubyte"
 
 static void handle_received_string_data(Server *server, void *data, size_t data_size) {
 	char *str = (char *)data;
@@ -15,16 +19,19 @@ static void handle_received_string_data(Server *server, void *data, size_t data_
 
 void handle_client(Server *server, int client_socket) {
 	void *buffer = (void *)malloc(server->params.max_data_buffer_size);
-	size_t bytes_received = recv(client_socket, buffer,
-								 server->params.max_data_buffer_size, 0);
+	size_t bytes_received = recv(client_socket, buffer, server->params.max_data_buffer_size, 0);
 	if (bytes_received < 0) {
 		lodge_error("could not receive data from client socket '%d'", client_socket);
 		return;
 	}
-	server->handle_received_data(server, buffer, bytes_received);	
+	server->handle_received_data(server, buffer, bytes_received);
 }
 
-void instantiate_server(Server *server) {	
+void instantiate_server(Server *server, Data *data) {
+	// Partitioning data
+	server->data_array = n_partition_data(data, server->max_clients);
+	lodge_info("data partitioned into '%lu' chunks", server->max_clients);
+
 	pid_t pid = fork();
     if (pid < 0) {
 		lodge_fatal("could not create new process for server");
@@ -108,17 +115,30 @@ void send_data_to_server(Client *client, void *data, size_t data_size) {
 	close(client_socket);
 }
 
+void register_client_to_server(Client *client, Server *server) {
+	if (server->num_clients == server->max_clients) {
+		lodge_error("max number of clients already reached");
+		return;
+	}
+	// Assigned ID and Data
+	client->client_id = server->num_clients++;
+	client->data = server->data_array+client->client_id;
+	lodge_info("client with ID '%lu' resgistered and received data chunk", client->client_id);
+}
+
 int main() {
-	ServerParams params = {.port=3000, .max_concurrent_conns=5, .max_data_buffer_size=65535};
+	ServerNetworkParams params = {.port=3000, .max_concurrent_conns=5, .max_data_buffer_size=65535};
 	Server server = {.params=params, .handle_received_data=&handle_received_string_data,
 					 .handle_client=&handle_client, .instantiate=&instantiate_server,
-					 .close=close_server};
-	
-	server.instantiate(&server);
+					 .close=close_server, .max_clients=params.max_concurrent_conns};
 
-	Client client = {.server_params=&params, .send_data_to_server=send_data_to_server};
+	server.instantiate(&server, mnist_dataloader(ImagesFilePath, LabelsFilePath));
+	
+	Client client = {.server_params=&params, .send_data_to_server=send_data_to_server,
+		.register_to_server = &register_client_to_server};
 
 	char *data = "Hello Server, this is client";
+	client.register_to_server(&client, &server);
 	client.send_data_to_server(&client, (void *)data, strlen(data)+1);
 
 	// Waiting for 4 seconds for server to receive the data then kill server
