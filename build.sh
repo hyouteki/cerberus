@@ -7,7 +7,7 @@ LIBS=("m" "pthread")
 BUILD_NAME="cerberus"
 INCLUDE_DIRS=("malpractice" "malpractice/lodge")
 
-CFLAGS=""
+CFLAGS="-O5 -Wno-unused-result"
 for dir in "${INCLUDE_DIRS[@]}"; do
 	CFLAGS="${CFLAGS} -I${dir}"
 done

@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include <malpractice.h>
 
@@ -16,7 +17,7 @@ typedef struct Client {
 	int client_id;
 	Data *data;
 	Model *model;
-	size_t pid;
+	pthread_t pid;
 	// NOTE: This is pointer as many clients will refer to the same server
 	ServerNetworkParams *server_params;
 } Client;
@@ -32,16 +33,21 @@ typedef struct Server {
 	size_t max_clients;
 	Data *data_array;
 	ServerNetworkParams params;
-	size_t pid;
+	pthread_t pid;
 } Server;
 
+typedef struct Client_Server {
+	Client *client;
+	Server *server;
+} Client_Server;
+
 void server_handle_received_data(Server *server, void *data, size_t data_size);
-// void server_handle_client(Server *server, int client_socket);
 void server_constructor(Server *server, Data *data);
 void server_destructor(Server *server);
 
 void client_send_data(Client *client, void *data, size_t data_size);
-void client_register(Client *client, Server *server);
+void client_register(Client_Server *cs);
 void client_train(Client *client);
+void client_destructor(Client *client);
 
 #endif // CERBERUS_H_

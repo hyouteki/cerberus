@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <arpa/inet.h>
-	
+
 #include "cerberus.h"
 #include <lodge.h>
 #include <mnist_dataloader.h>
@@ -29,27 +29,13 @@ void server_handle_client(Server *server, int client_socket) {
 	server_handle_received_string_data(server, buffer, bytes_received);
 }
 
-void server_constructor(Server *server, Data *data) {
-	// Partitioning data
-	server->data_array = n_partition_data(data, server->max_clients);
-	lodge_info("data partitioned into '%lu' chunks", server->max_clients);
-
-	pid_t pid = fork();
-    if (pid < 0) {
-		lodge_fatal("could not create new process for server");
-    } else if (pid > 0) {
-		// Parent process
-		lodge_debug("sleeping for 2 seconds for server to start...");
-		sleep(2);
-		return;
-	}
-	server->pid = getpid();
-
+static void *server_instantiate(void *param) {
+    Server *server = (Server *)param;
    	int server_socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_socket < 0) {
 	    lodge_fatal("could not instantiate server socket");
 	}
-	
+
 	struct sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = INADDR_ANY;
@@ -84,9 +70,17 @@ void server_constructor(Server *server, Data *data) {
 	close(server_socket);
 }
 
+void server_constructor(Server *server, Data *data) {
+	// Partitioning data
+	server->data_array = n_partition_data(data, server->max_clients);
+	lodge_info("data partitioned into '%lu' chunks", server->max_clients);
+
+    pthread_create(&server->pid, NULL, server_instantiate, (void *)server);
+}
+
 void server_destructor(Server *server) {
-	lodge_info("server with pid '%d' closed successfully", server->pid);
-	kill(server->pid, SIGKILL);
+	pthread_join(server->pid, NULL);
+	lodge_info("server closed successfully", server->pid);
 }
 
 void client_send_data(Client *client, void *data, size_t data_size) {
@@ -114,10 +108,13 @@ void client_send_data(Client *client, void *data, size_t data_size) {
 	close(client_socket);
 }
 
-void client_register(Client *client, Server *server) {
+static void *client_instantiate(void *param) {
+	Client_Server *cs = (Client_Server *)param;
+	Client *client = cs->client;
+	Server *server = cs->server;
 	if (server->num_clients == server->max_clients) {
 		lodge_error("max number of clients already reached");
-		return;
+		return NULL;
 	}
 	// Assigned ID and Data
 	client->client_id = server->num_clients++;
@@ -127,8 +124,17 @@ void client_register(Client *client, Server *server) {
 	client_train(client);
 }
 
+void client_register(Client_Server *cs) {
+	pthread_create(&cs->client->pid, NULL, client_instantiate, (void *)cs);
+}
+
 void client_train(Client *client) {
 	train(client->data, model_params, client->model);
+}
+
+void client_destructor(Client *client) {
+	pthread_join(client->pid, NULL);
+	lodge_info("client closed successfully", client->pid);
 }
 
 int main() {
@@ -136,17 +142,14 @@ int main() {
 	Server server = {.params=params, .max_clients=params.max_concurrent_conns, .num_clients=0};
 
 	server_constructor(&server, mnist_dataloader(ImagesFilePath, LabelsFilePath));
-	
+
 	Client client = {.server_params=&params};
 	client.model = initialize_model(input_size, hidden_size, output_size, Model_Init_Random);
 	describe_model(client.model);
 
-	char *data = "Hello Server, this is client";
-	client_register(&client, &server);
-	// client.send_data_to_server(&client, (void *)data, strlen(data)+1);
+	Client_Server cs = {.client=&client, .server=&server};
+	client_register(&cs);
 
-	// Waiting for 4 seconds for server to receive the data then kill server
-	sleep(40);
 	server_destructor(&server);
 	return 0;
 }
