@@ -23,7 +23,7 @@ typedef struct Client {
 } Client;
 
 typedef struct ClientList {
-	Client client;
+	Client *client;
 	struct ClientList *next;
 } ClientList;
 
@@ -36,17 +36,14 @@ typedef struct Server {
 	pthread_t pid;
 } Server;
 
-typedef struct Client_Server {
-	Client *client;
-	Server *server;
-} Client_Server;
+void client_list_push(ClientList **client_list, Client *client);
 
 void server_handle_received_data(Server *server, void *data, size_t data_size);
 void server_constructor(Server *server, Data *data);
 void server_destructor(Server *server);
 
 void client_send_data(Client *client, void *data, size_t data_size);
-void client_register(Client_Server *cs);
+void client_register(Client *client);
 void client_train(Client *client);
 void client_destructor(Client *client);
 

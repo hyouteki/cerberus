@@ -13,6 +13,8 @@
 Parameters model_params = (Parameters){.learning_rate = 0.01f, .epochs = 5, .log_train_metrics = 1};
 size_t input_size = 784, hidden_size = 128, output_size = 10;
 
+static Server *server = NULL;
+
 static void server_handle_received_string_data(Server *server, void *data, size_t data_size) {
 	char *str = (char *)data;
 	str[data_size] = 0;
@@ -83,6 +85,13 @@ void server_destructor(Server *server) {
 	lodge_info("server closed successfully", server->pid);
 }
 
+void client_list_push(ClientList **client_list, Client *client) {
+    ClientList *node = (ClientList *)malloc(sizeof(ClientList));
+    node->client = client;
+    node->next = *client_list;
+    *client_list = node;
+}
+
 void client_send_data(Client *client, void *data, size_t data_size) {
 	int client_socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (client_socket < 0) {
@@ -109,9 +118,7 @@ void client_send_data(Client *client, void *data, size_t data_size) {
 }
 
 static void *client_instantiate(void *param) {
-	Client_Server *cs = (Client_Server *)param;
-	Client *client = cs->client;
-	Server *server = cs->server;
+	Client *client = (Client *)param;
 	if (server->num_clients == server->max_clients) {
 		lodge_error("max number of clients already reached");
 		return NULL;
@@ -119,13 +126,14 @@ static void *client_instantiate(void *param) {
 	// Assigned ID and Data
 	client->client_id = server->num_clients++;
 	client->data = server->data_array+client->client_id;
+	client_list_push(&server->client_list, client);
 	lodge_info("client with ID '%lu' resgistered and received data chunk", client->client_id);
 	describe_data(client->data);
 	client_train(client);
 }
 
-void client_register(Client_Server *cs) {
-	pthread_create(&cs->client->pid, NULL, client_instantiate, (void *)cs);
+void client_register(Client *client) {
+	pthread_create(&client->pid, NULL, client_instantiate, (void *)client);
 }
 
 void client_train(Client *client) {
@@ -139,17 +147,19 @@ void client_destructor(Client *client) {
 
 int main() {
 	ServerNetworkParams params = {.port=3000, .max_concurrent_conns=5, .max_data_buffer_size=65535};
-	Server server = {.params=params, .max_clients=params.max_concurrent_conns, .num_clients=0};
+	server = (Server *)malloc(sizeof(Server));
+	server->params = params;
+	server->max_clients = params.max_concurrent_conns;
+	server->num_clients = 0;
 
-	server_constructor(&server, mnist_dataloader(ImagesFilePath, LabelsFilePath));
+	server_constructor(server, mnist_dataloader(ImagesFilePath, LabelsFilePath));
 
 	Client client = {.server_params=&params};
 	client.model = initialize_model(input_size, hidden_size, output_size, Model_Init_Random);
 	describe_model(client.model);
 
-	Client_Server cs = {.client=&client, .server=&server};
-	client_register(&cs);
+	client_register(&client);
 
-	server_destructor(&server);
+	server_destructor(server);
 	return 0;
 }
