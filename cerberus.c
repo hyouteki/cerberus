@@ -25,8 +25,10 @@ void server_handle_client(Server *server, int client_socket) {
 	Model *client_model = (Model *)buffer;
     if (!server->model) {
         server->model = clone_model(client_model);
+        lodge_debug("initialized server model from client model");
     } else {
-        // Add Model weights
+        add_inplace_model(server->model, client_model);
+        lodge_debug("added client model weights to server (global) model");
     }
 }
 
@@ -146,6 +148,8 @@ void client_destructor(Client *client) {
 }
 
 int main() {
+    lodge_set_log_level(LOG_DEBUG);
+
 	ServerNetworkParams params = {.port=3000, .max_concurrent_conns=5, .max_data_buffer_size=65535};
 	server = (Server *)malloc(sizeof(Server));
 	server->params = params;
