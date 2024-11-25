@@ -15,12 +15,6 @@ size_t input_size = 784, hidden_size = 128, output_size = 10;
 
 static Server *server = NULL;
 
-static void server_handle_received_string_data(Server *server, void *data, size_t data_size) {
-	char *str = (char *)data;
-	str[data_size] = 0;
-	lodge_info("received data: %s", str);
-}
-
 void server_handle_client(Server *server, int client_socket) {
 	void *buffer = (void *)malloc(server->params.max_data_buffer_size);
 	size_t bytes_received = recv(client_socket, buffer, server->params.max_data_buffer_size, 0);
@@ -28,7 +22,12 @@ void server_handle_client(Server *server, int client_socket) {
 		lodge_error("could not receive data from client socket '%d'", client_socket);
 		return;
 	}
-	server_handle_received_string_data(server, buffer, bytes_received);
+	Model *client_model = (Model *)buffer;
+    if (!server->model) {
+        server->model = clone_model(client_model);
+    } else {
+        // Add Model weights
+    }
 }
 
 static void *server_instantiate(void *param) {
@@ -130,6 +129,7 @@ static void *client_instantiate(void *param) {
 	lodge_info("client with ID '%lu' resgistered and received data chunk", client->client_id);
 	describe_data(client->data);
 	client_train(client);
+	client_send_data(client, (void *)client->model, sizeof(Model));
 }
 
 void client_register(Client *client) {
@@ -151,6 +151,7 @@ int main() {
 	server->params = params;
 	server->max_clients = params.max_concurrent_conns;
 	server->num_clients = 0;
+	server->model = NULL;
 
 	server_constructor(server, mnist_dataloader(ImagesFilePath, LabelsFilePath));
 

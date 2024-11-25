@@ -32,6 +32,7 @@ typedef struct Server {
 	size_t num_clients;
 	size_t max_clients;
 	Data *data_array;
+	Model *model;
 	ServerNetworkParams params;
 	pthread_t pid;
 } Server;
