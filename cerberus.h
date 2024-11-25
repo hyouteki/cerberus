@@ -33,8 +33,10 @@ typedef struct Server {
 	size_t max_clients;
 	Data *data_array;
 	Model *model;
+	size_t num_received_models;
 	ServerNetworkParams params;
 	pthread_t pid;
+	pthread_mutex_t model_mutex_lock;
 } Server;
 
 void client_list_push(ClientList **client_list, Client *client);

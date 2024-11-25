@@ -30,6 +30,7 @@ void server_handle_client(Server *server, int client_socket) {
         add_inplace_model(server->model, client_model);
         lodge_debug("added client model weights to server (global) model");
     }
+    free(buffer);
 }
 
 static void *server_instantiate(void *param) {
@@ -74,14 +75,18 @@ static void *server_instantiate(void *param) {
 }
 
 void server_constructor(Server *server, Data *data) {
-	// Partitioning data
+	server->num_received_models = 0;
+	server->model = NULL;
+	server->client_list = NULL;
+	server->num_clients = 0;
 	server->data_array = n_partition_data(data, server->max_clients);
 	lodge_info("data partitioned into '%lu' chunks", server->max_clients);
-
+    pthread_mutex_init(&server->model_mutex_lock, NULL);
     pthread_create(&server->pid, NULL, server_instantiate, (void *)server);
 }
 
 void server_destructor(Server *server) {
+    pthread_mutex_destroy(&server->model_mutex_lock);
 	pthread_join(server->pid, NULL);
 	lodge_info("server closed successfully", server->pid);
 }
@@ -115,6 +120,11 @@ void client_send_data(Client *client, void *data, size_t data_size) {
     }
 
 	send(client_socket, data, data_size, 0);
+
+    if (server->num_received_models == server->num_clients) {
+        // recv Server Model
+    }
+
 	close(client_socket);
 }
 
@@ -127,6 +137,7 @@ static void *client_instantiate(void *param) {
 	// Assigned ID and Data
 	client->client_id = server->num_clients++;
 	client->data = server->data_array+client->client_id;
+	server->num_clients++;
 	client_list_push(&server->client_list, client);
 	lodge_info("client with ID '%lu' resgistered and received data chunk", client->client_id);
 	describe_data(client->data);
@@ -154,8 +165,6 @@ int main() {
 	server = (Server *)malloc(sizeof(Server));
 	server->params = params;
 	server->max_clients = params.max_concurrent_conns;
-	server->num_clients = 0;
-	server->model = NULL;
 
 	server_constructor(server, mnist_dataloader(ImagesFilePath, LabelsFilePath));
 
