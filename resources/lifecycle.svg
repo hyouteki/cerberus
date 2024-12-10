@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="628pt" height="489pt" viewBox="0.00 0.00 628.00 488.95">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 484.95)">
+<title>G</title>
+<polygon fill="white" stroke="none" points="-4,4 -4,-484.95 624,-484.95 624,4 -4,4"/>
+<g id="clust1" class="cluster">
+<title>cluster_0</title>
+<polygon fill="lightgrey" stroke="lightgrey" points="348,-8 348,-322.15 612,-322.15 612,-8 348,-8"/>
+<text text-anchor="middle" x="480" y="-305.55" font-family="Times,serif" font-size="14.00">Client Process</text>
+</g>
+<g id="clust2" class="cluster">
+<title>cluster_1</title>
+<polygon fill="lightblue" stroke="lightblue" points="8,-82.28 8,-417.95 292,-417.95 292,-82.28 8,-82.28"/>
+<text text-anchor="middle" x="150" y="-401.35" font-family="Times,serif" font-size="14.00">Server Process</text>
+</g>
+<!-- Client_Init -->
+<g id="node1" class="node">
+<title>Client_Init</title>
+<ellipse fill="white" stroke="white" cx="453" cy="-271.35" rx="71.37" ry="18"/>
+<text text-anchor="middle" x="453" y="-267.15" font-family="Times,serif" font-size="14.00">Client Initialize</text>
+</g>
+<!-- Client_Train -->
+<g id="node2" class="node">
+<title>Client_Train</title>
+<ellipse fill="white" stroke="white" cx="481" cy="-198.35" rx="57.97" ry="18"/>
+<text text-anchor="middle" x="481" y="-194.15" font-family="Times,serif" font-size="14.00">Client Train</text>
+</g>
+<!-- Client_Init&#45;&gt;Client_Train -->
+<g id="edge1" class="edge">
+<title>Client_Init-&gt;Client_Train</title>
+<path fill="none" stroke="black" d="M459.78,-253.16C462.87,-245.32 466.62,-235.82 470.09,-227.01"/>
+<polygon fill="black" stroke="black" points="473.32,-228.38 473.73,-217.79 466.8,-225.81 473.32,-228.38"/>
+</g>
+<!-- Client_Send_Model -->
+<g id="node4" class="node">
+<title>Client_Send_Model</title>
+<ellipse fill="white" stroke="white" cx="442" cy="-108.28" rx="84" ry="18"/>
+<text text-anchor="middle" x="442" y="-104.08" font-family="Times,serif" font-size="14.00">Client Send Model</text>
+</g>
+<!-- Client_Train&#45;&gt;Client_Send_Model -->
+<g id="edge2" class="edge">
+<title>Client_Train-&gt;Client_Send_Model</title>
+<path fill="none" stroke="black" d="M490.12,-180.27C494.42,-169.8 497.51,-156.36 492,-145.55 489.54,-140.73 486.11,-136.4 482.18,-132.55"/>
+<polygon fill="black" stroke="black" points="484.65,-130.06 474.74,-126.31 480.15,-135.42 484.65,-130.06"/>
+</g>
+<!-- End -->
+<g id="node10" class="node">
+<title>End</title>
+<polygon fill="none" stroke="black" points="340.28,-127.55 301.72,-127.55 301.72,-89 340.28,-89 340.28,-127.55"/>
+<polyline fill="none" stroke="black" points="313.72,-127.55 301.72,-115.55"/>
+<polyline fill="none" stroke="black" points="301.72,-101 313.72,-89"/>
+<polyline fill="none" stroke="black" points="328.28,-89 340.28,-101"/>
+<polyline fill="none" stroke="black" points="340.28,-115.55 328.28,-127.55"/>
+<text text-anchor="middle" x="321" y="-104.08" font-family="Times,serif" font-size="14.00">End</text>
+</g>
+<!-- Client_Train&#45;&gt;End -->
+<g id="edge14" class="edge">
+<title>Client_Train-&gt;End</title>
+<path fill="none" stroke="black" d="M428.61,-190.35C392.73,-184.54 349.31,-175.14 336.02,-162.35 329.66,-156.24 325.93,-147.65 323.77,-139.16"/>
+<polygon fill="black" stroke="black" points="327.22,-138.57 321.96,-129.38 320.33,-139.85 327.22,-138.57"/>
+<text text-anchor="middle" x="412.01" y="-149.75" font-family="Times,serif" font-size="14.00">(If Global Epochs reached)</text>
+</g>
+<!-- Client_Receive_Global_Model -->
+<g id="node3" class="node">
+<title>Client_Receive_Global_Model</title>
+<ellipse fill="white" stroke="white" cx="480" cy="-34" rx="124.48" ry="18"/>
+<text text-anchor="middle" x="480" y="-29.8" font-family="Times,serif" font-size="14.00">Client Receive Global Model</text>
+</g>
+<!-- Client_Receive_Global_Model&#45;&gt;Client_Train -->
+<g id="edge11" class="edge">
+<title>Client_Receive_Global_Model-&gt;Client_Train</title>
+<path fill="none" stroke="black" d="M508.49,-51.96C518.85,-59.76 529.38,-70.03 535,-82.28 543.4,-100.56 541.51,-108.51 535,-127.55 529.26,-144.35 517.65,-160.24 506.67,-172.61"/>
+<polygon fill="black" stroke="black" points="504.17,-170.15 499.9,-179.84 509.29,-174.93 504.17,-170.15"/>
+</g>
+<!-- Client_Send_Model&#45;&gt;Client_Receive_Global_Model -->
+<g id="edge3" class="edge">
+<title>Client_Send_Model-&gt;Client_Receive_Global_Model</title>
+<path fill="none" stroke="black" d="M451.01,-90.15C455.41,-81.78 460.81,-71.5 465.75,-62.1"/>
+<polygon fill="black" stroke="black" points="468.8,-63.83 470.35,-53.35 462.6,-60.57 468.8,-63.83"/>
+</g>
+<!-- Server_Wait_For_Models -->
+<g id="node6" class="node">
+<title>Server_Wait_For_Models</title>
+<ellipse fill="white" stroke="white" cx="178" cy="-271.35" rx="102.48" ry="18"/>
+<text text-anchor="middle" x="178" y="-267.15" font-family="Times,serif" font-size="14.00">Server Wait for Models</text>
+</g>
+<!-- Client_Send_Model&#45;&gt;Server_Wait_For_Models -->
+<g id="edge9" class="edge">
+<title>Client_Send_Model-&gt;Server_Wait_For_Models</title>
+<path fill="none" stroke="black" d="M374.61,-119.38C356,-124.74 336.87,-132.96 322,-145.55 295.21,-168.24 311.81,-191.52 287,-216.35 272.59,-230.78 253.54,-242 235.41,-250.39"/>
+<polygon fill="black" stroke="black" points="234.02,-247.18 226.27,-254.39 236.83,-253.59 234.02,-247.18"/>
+</g>
+<!-- Server_Init -->
+<g id="node5" class="node">
+<title>Server_Init</title>
+<ellipse fill="white" stroke="white" cx="195" cy="-367.15" rx="72.97" ry="18"/>
+<text text-anchor="middle" x="195" y="-362.95" font-family="Times,serif" font-size="14.00">Server Initialize</text>
+</g>
+<!-- Server_Init&#45;&gt;Server_Wait_For_Models -->
+<g id="edge4" class="edge">
+<title>Server_Init-&gt;Server_Wait_For_Models</title>
+<path fill="none" stroke="black" d="M191.88,-348.95C189.45,-335.54 186.03,-316.65 183.19,-300.98"/>
+<polygon fill="black" stroke="black" points="186.65,-300.47 181.43,-291.25 179.77,-301.72 186.65,-300.47"/>
+</g>
+<!-- Server_Aggregate_Models -->
+<g id="node7" class="node">
+<title>Server_Aggregate_Models</title>
+<ellipse fill="white" stroke="white" cx="168" cy="-198.35" rx="110.26" ry="18"/>
+<text text-anchor="middle" x="168" y="-194.15" font-family="Times,serif" font-size="14.00">Server Aggregate Models</text>
+</g>
+<!-- Server_Wait_For_Models&#45;&gt;Server_Aggregate_Models -->
+<g id="edge5" class="edge">
+<title>Server_Wait_For_Models-&gt;Server_Aggregate_Models</title>
+<path fill="none" stroke="black" d="M169.7,-253.16C167.82,-245.49 166.27,-236.24 165.35,-227.6"/>
+<polygon fill="black" stroke="black" points="168.87,-227.61 164.65,-217.89 161.88,-228.12 168.87,-227.61"/>
+</g>
+<!-- Server_Aggregate_Models&#45;&gt;Server_Wait_For_Models -->
+<g id="edge12" class="edge">
+<title>Server_Aggregate_Models-&gt;Server_Wait_For_Models</title>
+<path fill="none" stroke="black" d="M176.26,-216.38C178.15,-224.03 179.71,-233.27 180.63,-241.93"/>
+<polygon fill="black" stroke="black" points="177.12,-241.94 181.35,-251.66 184.1,-241.42 177.12,-241.94"/>
+</g>
+<!-- Server_Distribute_Global_Model -->
+<g id="node8" class="node">
+<title>Server_Distribute_Global_Model</title>
+<ellipse fill="white" stroke="white" cx="150" cy="-108.28" rx="133.6" ry="18"/>
+<text text-anchor="middle" x="150" y="-104.08" font-family="Times,serif" font-size="14.00">Server Distribute Global Model</text>
+</g>
+<!-- Server_Aggregate_Models&#45;&gt;Server_Distribute_Global_Model -->
+<g id="edge6" class="edge">
+<title>Server_Aggregate_Models-&gt;Server_Distribute_Global_Model</title>
+<path fill="none" stroke="black" d="M164.44,-179.95C161.98,-167.89 158.64,-151.55 155.79,-137.63"/>
+<polygon fill="black" stroke="black" points="159.28,-137.22 153.85,-128.12 152.43,-138.62 159.28,-137.22"/>
+</g>
+<!-- Server_Aggregate_Models&#45;&gt;End -->
+<g id="edge13" class="edge">
+<title>Server_Aggregate_Models-&gt;End</title>
+<path fill="none" stroke="black" d="M201.3,-180.73C225.29,-168.42 258.47,-150.72 291.84,-130"/>
+<polygon fill="black" stroke="black" points="293.36,-133.18 299.96,-124.89 289.63,-127.25 293.36,-133.18"/>
+</g>
+<!-- Server_Distribute_Global_Model&#45;&gt;Client_Receive_Global_Model -->
+<g id="edge10" class="edge">
+<title>Server_Distribute_Global_Model-&gt;Client_Receive_Global_Model</title>
+<path fill="none" stroke="black" d="M217.98,-92.39C271.57,-80.65 346.35,-64.27 402.31,-52.02"/>
+<polygon fill="black" stroke="black" points="402.74,-55.5 411.76,-49.95 401.24,-48.67 402.74,-55.5"/>
+</g>
+<!-- Start -->
+<g id="node9" class="node">
+<title>Start</title>
+<polygon fill="none" stroke="black" points="260,-480.95 218.6,-462.95 260,-444.95 301.4,-462.95 260,-480.95"/>
+<polyline fill="none" stroke="black" points="229.6,-467.74 229.6,-458.17"/>
+<polyline fill="none" stroke="black" points="249,-449.74 271,-449.74"/>
+<polyline fill="none" stroke="black" points="290.4,-458.17 290.4,-467.74"/>
+<polyline fill="none" stroke="black" points="271,-476.17 249,-476.17"/>
+<text text-anchor="middle" x="260" y="-458.75" font-family="Times,serif" font-size="14.00">Start</text>
+</g>
+<!-- Start&#45;&gt;Client_Init -->
+<g id="edge7" class="edge">
+<title>Start-&gt;Client_Init</title>
+<path fill="none" stroke="black" d="M272.37,-449.8C303.58,-419.14 386.03,-338.14 427.88,-297.03"/>
+<polygon fill="black" stroke="black" points="430.15,-299.7 434.84,-290.2 425.25,-294.71 430.15,-299.7"/>
+</g>
+<!-- Start&#45;&gt;Server_Init -->
+<g id="edge8" class="edge">
+<title>Start-&gt;Server_Init</title>
+<path fill="none" stroke="black" d="M250.69,-448.51C240.97,-434.49 225.49,-412.15 213.31,-394.58"/>
+<polygon fill="black" stroke="black" points="216.38,-392.86 207.81,-386.63 210.63,-396.85 216.38,-392.86"/>
+</g>
+</g>
+</svg>

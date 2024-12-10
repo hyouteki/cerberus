@@ -1,0 +1,38 @@
+digraph G {
+
+  subgraph cluster_0 {
+    style=filled;
+    color=lightgrey;
+    node [style=filled,color=white];
+    Client_Init [label="Client Initialize"];
+    Client_Train [label="Client Train"];
+    Client_Receive_Global_Model [label="Client Receive Global Model"];
+    Client_Init -> Client_Train -> Client_Send_Model -> Client_Receive_Global_Model;
+    label = "Client Process";
+  }
+
+  subgraph cluster_1 {
+    style=filled;
+    color=lightblue;
+    node [style=filled,color=white];
+    Server_Init [label="Server Initialize"];
+    Server_Wait_For_Models [label="Server Wait for Models"];
+    Server_Aggregate_Models [label="Server Aggregate Models"];
+    Server_Distribute_Global_Model [label="Server Distribute Global Model"];
+    Server_Init -> Server_Wait_For_Models -> Server_Aggregate_Models -> Server_Distribute_Global_Model;
+    label = "Server Process";
+  }
+
+  Start -> Client_Init;
+  Start -> Server_Init;
+  Client_Send_Model [label="Client Send Model"];
+  Client_Send_Model -> Server_Wait_For_Models;
+  Server_Distribute_Global_Model -> Client_Receive_Global_Model;
+  Client_Receive_Global_Model -> Client_Train;
+  Server_Aggregate_Models -> Server_Wait_For_Models;
+  Server_Aggregate_Models -> End;
+  Client_Train -> End [label="(If Global Epochs reached)"];
+
+  Start [shape=Mdiamond];
+  End [shape=Msquare];
+}

@@ -18,6 +18,8 @@ typedef struct Client {
 	Data *data;
 	Model *model;
 	pthread_t pid;
+	Parameters model_params;
+	int train_signal;
 	// NOTE: This is pointer as many clients will refer to the same server
 	ServerNetworkParams *server_params;
 } Client;
@@ -36,6 +38,7 @@ typedef struct Server {
 	size_t num_received_models;
 	ServerNetworkParams params;
 	pthread_t pid;
+	size_t global_epochs_trained;
 	pthread_mutex_t model_mutex_lock;
 } Server;
 

@@ -5,22 +5,28 @@
 #include <arpa/inet.h>
 
 #include "cerberus.h"
+#include "malpractice.h"
 #include <lodge.h>
 #include <mnist_dataloader.h>
 
 #define ImagesFilePath "malpractice/mnist/train-images-idx3-ubyte"
 #define LabelsFilePath "malpractice/mnist/train-labels-idx1-ubyte"
-Parameters model_params = (Parameters){.learning_rate = 0.01f, .epochs = 5, .log_train_metrics = 1};
 size_t input_size = 784, hidden_size = 128, output_size = 10;
+#define Port 4000
+#define LearningRate 0.01f
+#define LocalEpochs 10
+#define LogTrainMetrics 1
+#define NumClients 3
+#define GlobalEpochs 10
 
 static Server *server = NULL;
 
-void server_handle_client(Server *server, int client_socket) {
+int server_handle_client(Server *server, int client_socket) {
 	void *buffer = (void *)malloc(server->params.max_data_buffer_size);
 	size_t bytes_received = recv(client_socket, buffer, server->params.max_data_buffer_size, 0);
 	if (bytes_received < 0) {
 		lodge_error("could not receive data from client socket '%d'", client_socket);
-		return;
+		return 0;
 	}
 	Model *client_model = (Model *)buffer;
     if (!server->model) {
@@ -28,9 +34,26 @@ void server_handle_client(Server *server, int client_socket) {
         lodge_debug("initialized server model from client model");
     } else {
         add_inplace_model(server->model, client_model);
-        lodge_debug("added client model weights to server (global) model");
+        /* lodge_debug("added client model weights to server (global) model"); */
     }
     free(buffer);
+
+	server->num_received_models++;
+	if (server->num_received_models == server->max_clients) {
+		normalize_inplace_model(server->model, server->max_clients);
+		ClientList *itr = server->client_list;
+		while (itr) {
+			// NOTE: For the time being model is being updated using the client ptr
+			itr->client->model = clone_model(server->model);
+			itr->client->train_signal = 1;
+			itr = itr->next;
+		}
+		test(&server->data_array[0], server->model);
+		server->num_received_models = 0;
+		server->global_epochs_trained++;
+	}
+
+	return server->global_epochs_trained == GlobalEpochs;
 }
 
 static void *server_instantiate(void *param) {
@@ -66,9 +89,12 @@ static void *server_instantiate(void *param) {
 			lodge_error("could not accept client connection");
 			continue;
 		}
-	    lodge_info("accepted client connection");
-		server_handle_client(server, client_socket);
+	    /* lodge_info("accepted client connection"); */
+		int ret = server_handle_client(server, client_socket);
 		close(client_socket);
+		if (ret) {
+			break;
+		}
 	}
 
 	close(server_socket);
@@ -79,6 +105,7 @@ void server_constructor(Server *server, Data *data) {
 	server->model = NULL;
 	server->client_list = NULL;
 	server->num_clients = 0;
+	server->global_epochs_trained = 0;
 	server->data_array = n_partition_data(data, server->max_clients);
 	lodge_info("data partitioned into '%lu' chunks", server->max_clients);
     pthread_mutex_init(&server->model_mutex_lock, NULL);
@@ -120,16 +147,12 @@ void client_send_data(Client *client, void *data, size_t data_size) {
     }
 
 	send(client_socket, data, data_size, 0);
-
-    if (server->num_received_models == server->num_clients) {
-        // recv Server Model
-    }
-
 	close(client_socket);
 }
 
 static void *client_instantiate(void *param) {
 	Client *client = (Client *)param;
+	pthread_mutex_lock(&server->model_mutex_lock);
 	if (server->num_clients == server->max_clients) {
 		lodge_error("max number of clients already reached");
 		return NULL;
@@ -137,12 +160,18 @@ static void *client_instantiate(void *param) {
 	// Assigned ID and Data
 	client->client_id = server->num_clients++;
 	client->data = server->data_array+client->client_id;
-	server->num_clients++;
+    pthread_mutex_unlock(&server->model_mutex_lock);
+	client->train_signal = 1;
+	char client_prefix[50];
+	sprintf(client_prefix, "Client %d =>", client->client_id);
+	client->model_params = (Parameters){.learning_rate=LearningRate, .epochs=LocalEpochs,
+										.log_train_metrics=LogTrainMetrics, .train_prefix=client_prefix};
 	client_list_push(&server->client_list, client);
 	lodge_info("client with ID '%lu' resgistered and received data chunk", client->client_id);
 	describe_data(client->data);
-	client_train(client);
-	client_send_data(client, (void *)client->model, sizeof(Model));
+	while (server->global_epochs_trained < GlobalEpochs) {
+		client_train(client);
+	}
 }
 
 void client_register(Client *client) {
@@ -150,30 +179,41 @@ void client_register(Client *client) {
 }
 
 void client_train(Client *client) {
-	train(client->data, model_params, client->model);
+	lodge_debug("client %d %lu %d", client->client_id, server->global_epochs_trained, client->train_signal);
+	if (server->global_epochs_trained >= GlobalEpochs) return;
+	if (!client->train_signal) return;
+	train(client->data, client->model_params, client->model);
+	client->train_signal = 0;
+	client_send_data(client, (void *)client->model, sizeof(Model));
 }
 
 void client_destructor(Client *client) {
 	pthread_join(client->pid, NULL);
-	lodge_info("client closed successfully", client->pid);
+	lodge_info("client '%d' closed successfully", client->client_id);
 }
 
 int main() {
-    lodge_set_log_level(LOG_DEBUG);
+    lodge_set_log_level(LOG_INFO);
 
-	ServerNetworkParams params = {.port=3000, .max_concurrent_conns=5, .max_data_buffer_size=65535};
+	ServerNetworkParams params = {.port=Port, .max_concurrent_conns=NumClients, .max_data_buffer_size=65535};
 	server = (Server *)malloc(sizeof(Server));
 	server->params = params;
 	server->max_clients = params.max_concurrent_conns;
 
 	server_constructor(server, mnist_dataloader(ImagesFilePath, LabelsFilePath));
 
-	Client client = {.server_params=&params};
-	client.model = initialize_model(input_size, hidden_size, output_size, Model_Init_Random);
-	describe_model(client.model);
+	Client clients[NumClients];
 
-	client_register(&client);
+	for (size_t i = 0; i < NumClients; ++i) {
+		clients[i] = (Client){.server_params = &params};
+		clients[i].model = initialize_model(input_size, hidden_size, output_size, Model_Init_Random);
+		describe_model(clients[i].model);
+		client_register(&clients[i]);
+	}
 
+	for (size_t i = 0; i < NumClients; ++i) {
+		client_destructor(&clients[i]);
+	}
 	server_destructor(server);
 	return 0;
 }
