@@ -5,19 +5,21 @@
 #include <arpa/inet.h>
 
 #include "cerberus.h"
+#include "config_parser.h"
 #include "malpractice.h"
 #include <lodge.h>
 #include <mnist_dataloader.h>
 
-#define ImagesFilePath "malpractice/mnist/train-images-idx3-ubyte"
-#define LabelsFilePath "malpractice/mnist/train-labels-idx1-ubyte"
-size_t input_size = 784, hidden_size = 128, output_size = 10;
-#define Port 4000
-#define LearningRate 0.01f
-#define LocalEpochs 10
-#define LogTrainMetrics 1
-#define NumClients 3
-#define GlobalEpochs 10
+#define ConfigFilePath "params.config"
+
+// Default values 
+static char *images_file_path = "malpractice/mnist/train-images-idx3-ubyte";
+static char *labels_file_path = "malpractice/mnist/train-labels-idx1-ubyte";
+static size_t input_size = 784, hidden_size = 128, output_size = 10;
+static size_t port = 4000, num_clients = 3, global_epochs = 10;
+static float learning_rate = 0.01f;
+static size_t local_epochs = 10;
+static int log_train_metrics = 1;
 
 static Server *server = NULL;
 
@@ -53,7 +55,7 @@ int server_handle_client(Server *server, int client_socket) {
 		server->global_epochs_trained++;
 	}
 
-	return server->global_epochs_trained == GlobalEpochs;
+	return server->global_epochs_trained == global_epochs;
 }
 
 static void *server_instantiate(void *param) {
@@ -164,12 +166,12 @@ static void *client_instantiate(void *param) {
 	client->train_signal = 1;
 	char client_prefix[50];
 	sprintf(client_prefix, "Client %d =>", client->client_id);
-	client->model_params = (Parameters){.learning_rate=LearningRate, .epochs=LocalEpochs,
-										.log_train_metrics=LogTrainMetrics, .train_prefix=client_prefix};
+	client->model_params = (Parameters){.learning_rate=learning_rate, .epochs=local_epochs,
+										.log_train_metrics=log_train_metrics, .train_prefix=client_prefix};
 	client_list_push(&server->client_list, client);
 	lodge_info("client with ID '%lu' resgistered and received data chunk", client->client_id);
 	describe_data(client->data);
-	while (server->global_epochs_trained < GlobalEpochs) {
+	while (server->global_epochs_trained < global_epochs) {
 		client_train(client);
 	}
 }
@@ -180,7 +182,7 @@ void client_register(Client *client) {
 
 void client_train(Client *client) {
 	lodge_debug("client %d %lu %d", client->client_id, server->global_epochs_trained, client->train_signal);
-	if (server->global_epochs_trained >= GlobalEpochs) return;
+	if (server->global_epochs_trained >= global_epochs) return;
 	if (!client->train_signal) return;
 	train(client->data, client->model_params, client->model);
 	client->train_signal = 0;
@@ -192,26 +194,49 @@ void client_destructor(Client *client) {
 	lodge_info("client '%d' closed successfully", client->client_id);
 }
 
+static void load_and_update_config(ConfigList *list) {
+    update_config(list, "images_file_path", &images_file_path, ConfigValType_String);
+    update_config(list, "labels_file_path", &labels_file_path, ConfigValType_String);
+    update_config(list, "input_size", &input_size, ConfigValType_Int);
+    update_config(list, "hidden_size", &hidden_size, ConfigValType_Int);
+    update_config(list, "output_size", &output_size, ConfigValType_Int);
+    update_config(list, "port", &port, ConfigValType_Int);
+    update_config(list, "num_clients", &num_clients, ConfigValType_Int);
+    update_config(list, "global_epochs", &global_epochs, ConfigValType_Int);
+    update_config(list, "learning_rate", &learning_rate, ConfigValType_Float);
+    update_config(list, "local_epochs", &local_epochs, ConfigValType_Int);
+    update_config(list, "log_train_metrics", &log_train_metrics, ConfigValType_Int);
+}
+
+static void parse_config_if_exists() {
+	ConfigList list;
+    init_config_list(&list);
+    parse_config(ConfigFilePath, &list);
+	print_config_list(&list);
+    load_and_update_config(&list);
+}
+
 int main() {
     lodge_set_log_level(LOG_INFO);
+	parse_config_if_exists();
 
-	ServerNetworkParams params = {.port=Port, .max_concurrent_conns=NumClients, .max_data_buffer_size=65535};
+	ServerNetworkParams params = {.port=port, .max_concurrent_conns=num_clients, .max_data_buffer_size=65535};
 	server = (Server *)malloc(sizeof(Server));
 	server->params = params;
 	server->max_clients = params.max_concurrent_conns;
 
-	server_constructor(server, mnist_dataloader(ImagesFilePath, LabelsFilePath));
+	server_constructor(server, mnist_dataloader(images_file_path, labels_file_path));
 
-	Client clients[NumClients];
+	Client clients[num_clients];
 
-	for (size_t i = 0; i < NumClients; ++i) {
+	for (size_t i = 0; i < num_clients; ++i) {
 		clients[i] = (Client){.server_params = &params};
 		clients[i].model = initialize_model(input_size, hidden_size, output_size, Model_Init_Random);
 		describe_model(clients[i].model);
 		client_register(&clients[i]);
 	}
 
-	for (size_t i = 0; i < NumClients; ++i) {
+	for (size_t i = 0; i < num_clients; ++i) {
 		client_destructor(&clients[i]);
 	}
 	server_destructor(server);
